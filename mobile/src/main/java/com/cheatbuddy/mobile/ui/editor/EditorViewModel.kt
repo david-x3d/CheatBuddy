@@ -1,5 +1,6 @@
 package com.cheatbuddy.mobile.ui.editor
 
+import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -13,6 +14,14 @@ import com.cheatbuddy.shared.model.Sheet
 import com.cheatbuddy.shared.model.TableBlock
 import com.cheatbuddy.shared.model.TextBlock
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import com.cheatbuddy.shared.importing.TableJsonImporter
+import com.cheatbuddy.shared.sync.SheetCodec
+import com.cheatbuddy.mobile.sync.PhoneSyncEngine
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.CancellationException
+import java.io.ByteArrayOutputStream
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -38,6 +47,7 @@ import javax.inject.Inject
 @HiltViewModel
 class EditorViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
+    @param:ApplicationContext private val context: Context,
     private val sheets: SheetRepository,
     private val images: ImageRepository,
     @param:AppScope private val appScope: CoroutineScope,
@@ -114,6 +124,48 @@ class EditorViewModel @Inject constructor(
                 _messages.tryEmit("Not enough storage to add this image.")
             } catch (e: IOException) {
                 _messages.tryEmit(e.message ?: "This image could not be added.")
+            } finally {
+                _importing.value = false
+            }
+        }
+    }
+
+    fun importTableJson(blockId: String, raw: String) = importTable(blockId) { raw }
+
+    fun importTableFile(blockId: String, uri: Uri) = importTable(blockId) {
+        val input = context.contentResolver.openInputStream(uri)
+            ?: throw IOException("Could not open this JSON file.")
+        input.use {
+            val output = ByteArrayOutputStream()
+            val buffer = ByteArray(4096)
+            while (true) {
+                val count = it.read(buffer)
+                if (count < 0) break
+                require(output.size() + count <= TableJsonImporter.MAX_BYTES) { "JSON must be smaller than 90 KB." }
+                output.write(buffer, 0, count)
+            }
+            output.toString(Charsets.UTF_8.name())
+        }
+    }
+
+    private fun importTable(blockId: String, read: () -> String) {
+        viewModelScope.launch {
+            _importing.value = true
+            try {
+                val table = withContext(Dispatchers.IO) { TableJsonImporter.parse(read(), blockId) }
+                val current = _sheet.value ?: return@launch
+                if (current.blocks.none { it.id == blockId && it is TableBlock }) return@launch
+                val next = current.copy(blocks = current.blocks.map { if (it.id == blockId) table else it })
+                val fits = withContext(Dispatchers.Default) {
+                    SheetCodec.encodeSheet(next).encodeToByteArray().size <= PhoneSyncEngine.MAX_ITEM_BYTES
+                }
+                require(fits) { "This sheet is too large to sync. Import the table into a smaller sheet." }
+                updateBlock(table)
+                _messages.tryEmit("Imported ${table.rows.size} rows and ${table.columnCount} columns.")
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _messages.tryEmit(e.message ?: "Could not import this table.")
             } finally {
                 _importing.value = false
             }

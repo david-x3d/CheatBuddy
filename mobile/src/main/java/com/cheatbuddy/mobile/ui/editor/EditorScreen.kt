@@ -260,7 +260,7 @@ private fun BlockList(sheet: Sheet, viewModel: EditorViewModel) {
                         when (block) {
                             is TextBlock -> TextBlockEditor(block, viewModel::updateBlock)
                             is ImageBlock -> ImageBlockEditor(block, viewModel.imageFile(block.imageId))
-                            is TableBlock -> TableBlockEditor(block, viewModel::updateBlock)
+                            is TableBlock -> TableBlockEditor(block, viewModel::updateBlock, viewModel::importTableJson, viewModel::importTableFile)
                         }
                     }
                 }
@@ -293,7 +293,7 @@ private fun PreviewPane(sheet: Sheet, viewModel: EditorViewModel) {
         Text("Live watch preview", style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(4.dp))
         Text(
-            "Scroll inside the watch face. On the watch, turn the crown to zoom images and tables.",
+            "Scroll inside the watch face. On the watch, turn the crown to scroll. Pinch with two fingers to zoom images and tables.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,

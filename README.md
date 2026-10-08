@@ -23,14 +23,33 @@ export ANDROID_HOME=/path/to/Android/Sdk
 ./gradlew :shared:test :mobile:testDebugUnitTest :wear:testDebugUnitTest :mobile:assembleDebug :wear:assembleDebug
 ```
 
-APKs:
+Optimized release APKs (run the release build command below):
 
-- `mobile/build/outputs/apk/debug/mobile-debug.apk`
-- `wear/build/outputs/apk/debug/wear-debug.apk`
+- `mobile/build/outputs/apk/release/mobile-release.apk`
+- `wear/build/outputs/apk/release/wear-release.apk`
 
 Phone minimum API: 26. Watch minimum API: 30 (Wear OS 3+). Both apps use `com.cheatbuddy.app` and must be signed with the same certificate for Data Layer communication.
 
 For release builds, set `CHEATBUDDY_KEYSTORE`, `CHEATBUDDY_KEYSTORE_PASSWORD`, `CHEATBUDDY_KEY_ALIAS` and `CHEATBUDDY_KEY_PASSWORD`, then run `./gradlew :mobile:assembleRelease :wear:assembleRelease`. Without those variables, release APKs use the debug certificate for local testing. Configure your own signing key before distribution.
+
+## Import tables from JSON
+
+In the phone editor, add a table (or use an existing one), then tap **Import JSON**. Paste JSON and tap **Import**, or choose a JSON file. Import replaces that table, preserves its position, and autosaves/syncs the result. Invalid input leaves the existing table unchanged and shows an error.
+
+Supported formats:
+
+```json
+{
+  "hasHeader": true,
+  "rows": [
+    ["Term", "Meaning"],
+    ["CPU", "Central processing unit"],
+    ["RAM", "Random access memory"]
+  ]
+}
+```
+
+A plain array such as `[["Term","Meaning"],["CPU","Central processing unit"]]` also works and uses its first row as the header. Cells may be strings, numbers, booleans or null (empty). Short rows are padded with empty cells. Imports are limited to 200 rows, 8 columns and 90 KB; the resulting sheet must also fit the sync payload limit. A ready-to-use file is in [docs/example-table.json](docs/example-table.json).
 
 ## Install and pair
 
@@ -40,8 +59,8 @@ Pair a physical watch using its manufacturer's phone companion app. Enable devel
 adb pair WATCH_IP:PAIRING_PORT
 adb connect WATCH_IP:DEBUG_PORT
 adb devices
-adb -s PHONE_SERIAL install -r mobile/build/outputs/apk/debug/mobile-debug.apk
-adb -s WATCH_SERIAL install -r wear/build/outputs/apk/debug/wear-debug.apk
+adb -s PHONE_SERIAL install -r mobile/build/outputs/apk/release/mobile-release.apk
+adb -s WATCH_SERIAL install -r wear/build/outputs/apk/release/wear-release.apk
 adb -s PHONE_SERIAL shell am start -n com.cheatbuddy.app/com.cheatbuddy.mobile.MainActivity
 adb -s WATCH_SERIAL shell am start -n com.cheatbuddy.app/com.cheatbuddy.wear.MainActivity
 ```
@@ -58,7 +77,7 @@ Manual acceptance checks:
 
 1. Create a sheet containing formatted text, a table with several rows/columns, and an image. Reorder blocks and check the preview and watch ordering.
 2. Wait until sync is complete, then switch off the phone. Relaunch the watch app and open the sheet: text, table and image should remain available.
-3. Rotate the crown with an image/table centered to zoom; drag to pan, pinch to zoom, and double-tap to reset. With text centered, the crown scrolls. Check the table's pinned header and horizontal pan.
+3. Rotate the crown to scroll the sheet. Pinch images/tables with two fingers to zoom, drag to pan, and double-tap to reset. Check the table's pinned header and horizontal pan.
 4. Reconnect the phone, edit content and delete another sheet. Confirm the watch updates automatically.
 5. Check watch Settings for sync errors/retry. Test round and square Wear AVDs, ambient mode, phone light/dark themes and the tile.
 
@@ -72,4 +91,4 @@ No server account or cloud backend is required. Clearing app data or uninstallin
 
 ## Validation status
 
-The debug APKs build successfully. All 27 JVM/Robolectric tests pass, including local watch reads with a disconnected phone and recovery from a stalled image transfer. Android lint passes for both modules with non-blocking warnings. Physical-device UI, pairing and end-to-end sync checks are pending user testing.
+Both optimized version 1.1 release APKs build successfully. All 31 JVM/Robolectric tests pass, including JSON import validation, serialization, local watch reads with a disconnected phone, and recovery from stalled image transfers. Release lint passes for both modules with non-blocking warnings. The user confirmed the initial version works on the paired phone and Pixel Watch 5; responsiveness and gestures in the updated build require device testing.

@@ -36,8 +36,8 @@ discriminator, unknown keys ignored, `schemaVersion` in the envelope for forward
 
 ## Watch UI
 `AppScaffold` + `TimeText`, `SwipeDismissableNavHost` (Home → Sheet, Settings), `ScalingLazyColumn` with
-edge scaling and scroll indicator. The crown zooms the image or table nearest the screen center, with animation
-and haptic feedback at the min and max zoom. If no image or table is visible, the crown scrolls. Pinch zooms,
+edge scaling and scroll indicator. The crown scrolls the sheet using Wear foundation rotary scrolling. Pinch zooms images and tables, with
+haptic feedback at the min and max zoom;
 a double tap resets the zoom, and drag pans the content. Tables have a sticky header, alternating row tint and
 horizontal pan. The watch also supports ambient mode, has a tile that opens the last viewed sheet, and shows
 empty states.

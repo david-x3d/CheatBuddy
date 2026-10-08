@@ -1,5 +1,15 @@
 package com.cheatbuddy.mobile.ui.editor
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
@@ -120,7 +130,49 @@ fun ImageBlockEditor(block: ImageBlock, file: File?) {
 private val CellWidth = 128.dp
 
 @Composable
-fun TableBlockEditor(block: TableBlock, onChange: (TableBlock) -> Unit) {
+fun TableBlockEditor(
+    block: TableBlock,
+    onChange: (TableBlock) -> Unit,
+    onImportJson: (String, String) -> Unit,
+    onImportFile: (String, Uri) -> Unit,
+) {
+    var showImport by rememberSaveable(block.id) { mutableStateOf(false) }
+    var jsonText by rememberSaveable(block.id) { mutableStateOf("") }
+    val pickJson = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) onImportFile(block.id, uri)
+    }
+    if (showImport) {
+        AlertDialog(
+            onDismissRequest = { showImport = false },
+            title = { Text("Import table JSON") },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text("Replaces this table. Paste an array of rows, or an object with rows and hasHeader.")
+                    OutlinedTextField(
+                        value = jsonText,
+                        onValueChange = { jsonText = it },
+                        label = { Text("JSON") },
+                        placeholder = { Text("[[\"Term\",\"Meaning\"],[\"A\",\"B\"]]") },
+                        minLines = 4,
+                        maxLines = 8,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    TextButton(onClick = {
+                        showImport = false
+                        // Some document providers label JSON as plain text or binary.
+                        pickJson.launch(arrayOf("*/*"))
+                    }) { Text("Choose JSON file") }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = {
+                    onImportJson(block.id, jsonText)
+                    showImport = false
+                }, enabled = jsonText.isNotBlank()) { Text("Import") }
+            },
+            dismissButton = { TextButton(onClick = { showImport = false }) { Text("Cancel") } },
+        )
+    }
     val table = block.normalized()
     val colors = MaterialTheme.colorScheme
 
@@ -133,6 +185,7 @@ fun TableBlockEditor(block: TableBlock, onChange: (TableBlock) -> Unit) {
             Text("Header row", style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
             Switch(checked = table.hasHeader, onCheckedChange = { onChange(table.copy(hasHeader = it)) })
         }
+        TextButton(onClick = { showImport = true }) { Text("Import JSON") }
         Spacer(Modifier.height(8.dp))
         Column(Modifier.horizontalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             // Column remove buttons.

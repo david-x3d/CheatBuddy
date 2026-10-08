@@ -1,7 +1,6 @@
 package com.cheatbuddy.wear.ui.sheet
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
@@ -75,20 +74,17 @@ fun TextBlockView(block: TextBlock, modifier: Modifier = Modifier) {
     )
 }
 
-/** Accent ring around the block the crown currently zooms, plus a zoom badge. */
+/** Zoom badge; transformations stay in the graphics layer while pinching and panning. */
 @Composable
 private fun ZoomFrame(
     state: ZoomState,
-    isCrownTarget: Boolean,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
     val ambient = LocalAmbientState.current.isAmbient
-    val ringAlpha by animateFloatAsState(if (isCrownTarget && !ambient) 1f else 0f, label = "ring")
     Box(
         modifier
             .fillMaxWidth()
-            .border(2.dp, MaterialTheme.colorScheme.primary.copy(alpha = ringAlpha * 0.9f), BlockShape)
             .padding(3.dp)
             .clip(RoundedCornerShape(15.dp)),
     ) {
@@ -117,7 +113,6 @@ fun ImageBlockView(
     block: ImageBlock,
     file: File?,
     zoomState: ZoomState,
-    isCrownTarget: Boolean,
     onZoomLimit: (ZoomLimit) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -129,7 +124,7 @@ fun ImageBlockView(
         )
         return
     }
-    ZoomFrame(zoomState, isCrownTarget, modifier) {
+    ZoomFrame(zoomState, modifier) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             // Fit width, but cap height so tall images don't take several screens.
             val maxImageHeight = maxWidth * 1.25f
@@ -185,7 +180,6 @@ private fun MissingImage(modifier: Modifier) {
 fun TableBlockView(
     block: TableBlock,
     zoomState: ZoomState,
-    isCrownTarget: Boolean,
     onZoomLimit: (ZoomLimit) -> Unit,
     maxHeight: Dp,
     modifier: Modifier = Modifier,
@@ -196,7 +190,7 @@ fun TableBlockView(
     val cellStyle = MaterialTheme.typography.bodyMedium.copy(color = colors.onSurface)
     val headerStyle = MaterialTheme.typography.labelMedium.copy(color = colors.onPrimaryContainer, fontWeight = FontWeight.Bold)
 
-    ZoomFrame(zoomState, isCrownTarget, modifier) {
+    ZoomFrame(zoomState, modifier) {
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val widths = rememberColumnWidths(table, cellStyle, headerStyle, maxWidth)
             ZoomPanBox(

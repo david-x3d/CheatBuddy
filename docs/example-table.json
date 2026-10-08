@@ -1,0 +1,8 @@
+{
+  "hasHeader": true,
+  "rows": [
+    ["Term", "Meaning"],
+    ["CPU", "Central processing unit"],
+    ["RAM", "Random access memory"]
+  ]
+}
